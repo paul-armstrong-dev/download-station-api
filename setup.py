@@ -12,6 +12,7 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 
+# TODO: Get this working instead of the text lists below.
 def get_requirements(test=False) -> List[str]:
     """Returns all requirements for this package."""
     if test:
@@ -23,8 +24,22 @@ def get_requirements(test=False) -> List[str]:
     return requirements
 
 
-requirements = get_requirements()
-test_requirements = get_requirements(test=True)
+requirements = [
+    "loguru==0.5.3",
+    "requests==2.25.1"
+                ]
+
+test_requirements = [
+    "pip==19.2.3",
+    "bump2version==0.5.11",
+    "wheel==0.33.6",
+    "watchdog==0.9.0",
+    "flake8==3.7.8",
+    "tox==3.14.0",
+    "coverage==4.5.4",
+    "Sphinx==1.8.5",
+    "twine==1.14.0",
+]
 
 setup(
     author="Paul Armstrong",
