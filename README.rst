@@ -16,7 +16,7 @@ Download Station API
 
 
 
-Small python wrapper for interacting with the Synology Download Station. 
+Small python wrapper for interacting with the Synology Download Station.
 
 
 * Free software: MIT license
@@ -26,7 +26,9 @@ Small python wrapper for interacting with the Synology Download Station.
 Features
 --------
 
-* TODO
+* TODO: Write this readme
+
+* Can be installed with: pip install download-station-api==0.1.0
 
 Credits
 -------
