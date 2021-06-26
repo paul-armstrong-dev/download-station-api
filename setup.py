@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from typing import List
 
 """The setup script."""
 
@@ -10,9 +11,20 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = [ ]
 
-test_requirements = [ ]
+def get_requirements(test=False) -> List[str]:
+    """Returns all requirements for this package."""
+    if test:
+        with open('requirements_test.txt') as f:
+            requirements = f.read().splitlines()
+    else:
+        with open('requirements.txt') as f:
+            requirements = f.read().splitlines()
+    return requirements
+
+
+requirements = get_requirements()
+test_requirements = get_requirements(test=True)
 
 setup(
     author="Paul Armstrong",

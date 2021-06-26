@@ -7,6 +7,10 @@ from loguru import logger
 # api docs stored here:
 # https://global.download.synology.com/download/Document/DeveloperGuide/Synology_Download_Station_Web_API.pdf
 
+
+class AuthError(Exception): pass
+
+
 nas_api_endpoint_details = {
     'API_Info'    : {'maxVersion'  : 1, 'minVersion': 1, 'path': 'query.cgi',
                      'api_endpoint': 'SYNO.API.Info'},
@@ -38,9 +42,12 @@ From Synology docs
 GET
 /webapi/<CGI_PATH>?api=<API_NAME>&version=<VERSION>&method=<METHOD>[&<PARAMS>][&_sid=<SID>]
 """
-
+# Here to quiet "code smells" / neaten up the code a bit
+PROBLEM_ADDING_DOWNLOAD_LOG="Problem adding download task"
+ERROR_LOG=""
 
 class DownloadStationAPI:
+
     def __init__(self, user_name, password, nas_ip, api_port="5000", api_endpoint="webapi"):
         """
 
@@ -51,8 +58,7 @@ class DownloadStationAPI:
             :param api_port:
         """
         self.class_name = type(self).__name__
-        logger.info(
-            '{class_name} initialised'.format(class_name=self.class_name))
+        logger.info(f"{self.class_name} initialised")
 
         self.user_name = user_name
         self.password = password
@@ -65,12 +71,10 @@ class DownloadStationAPI:
                                             method='login',
                                             version=2)
 
-    def __enter__(self):
-        logger.info('{class_name} entered successfully'.format(
-            class_name=self.class_name))
-        return self
-
     def authenticate(self, session, format, method, version):
+        """
+            ADD DOCS
+        """
         authentication_params = {
             'session': session,
             'format' : format,
@@ -80,13 +84,8 @@ class DownloadStationAPI:
             'passwd' : self.password
         }
         # Authorization, returns SID
-        api_path = nas_api_endpoint_details['API_Auth']['path']
-        api_endpoint = nas_api_endpoint_details['API_Auth']['api_endpoint']
+        data = self._get_api_data("API_Auth", authentication_params)
 
-        api_url = f'{self.nas_address}/{api_path}?api={api_endpoint}'
-
-        response = requests.get(api_url, params=authentication_params)
-        data = response.json()
         if data['success']:
             # If successfully authenticated use
             # the SID in the subsequent requests
@@ -94,9 +93,26 @@ class DownloadStationAPI:
             session_id = data['data']['sid']
             return session_id
         else:
-            logger.error('Authentication unsuccessful')
             logger.error(data)
-            raise Exception
+            raise AuthError('Authentication unsuccessful')
+
+    def _get_api_data(self, api_endpoint, params=None, return_json=True):
+        """
+
+        """
+
+        endpoint_info = nas_api_endpoint_details.get(api_endpoint)
+
+        api_endpoint = endpoint_info.get("api_endpoint")
+        api_path = endpoint_info.get("path")
+
+        api_url = f'{self.nas_address}/{api_path}?api={api_endpoint}'
+        response = requests.get(api_url, params=params)
+
+        if return_json:
+            return response.json()
+        else:
+            return response
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
@@ -125,21 +141,6 @@ class DownloadStationAPI:
         else:
             logger.error('Problem with closing API sessions')
         return self
-
-    def format_api_endpoint_url(self,
-                                api_path,
-                                api_endpoint):
-        """
-            Wrote this because I realised I was generating these endpoints
-            All over the place, seems better to encapsulate it and not have
-            So much C + V code
-        :param api_path:
-        :param api_endpoint:
-        :return:
-        """
-        return self.nas_address + \
-               "/{path}?api={endpoint}".format(path=api_path,
-                                               endpoint=api_endpoint)
 
     def bt_search_for_show(self,
                            search_term,
@@ -176,23 +177,13 @@ class DownloadStationAPI:
             'module' : 'enabled',
             '_sid'   : self.session_id
         }
-        api_path = nas_api_endpoint_details['DS_BT_Search']['path']
-        api_endpoint = nas_api_endpoint_details['DS_BT_Search']['api_endpoint']
+        response = self._get_api_data("DS_BT_Search", search_params, return_json=False)
 
-        api_url = '{nasaddress}/' \
-                  '{path}?' \
-                  'api={api_end}'.format(nasaddress=self.nas_address,
-                                         path=api_path,
-                                         api_end=api_endpoint)
-        response = requests.get(api_url, params=search_params)
         data = response.json()
-
         search_task_id = data['data']['taskid']
 
         if response.status_code == 200:
-            logger.info('Starting {wait_time} second search for'
-                        ' {search_term}'.format(wait_time=wait_time,
-                                                search_term=search_term))
+            logger.info(f"Starting {wait_time} second search for {search_term}")
             time.sleep(wait_time)
 
             search_params = {
@@ -204,16 +195,10 @@ class DownloadStationAPI:
                 'taskid'        : search_task_id,
                 '_sid'          : self.session_id
             }
-
-            api_url = '{nasaddress}/{path}?api={api_end}'.format(
-                nasaddress=self.nas_address,
-                path=api_path, api_end=api_endpoint)
-
-            response = requests.get(api_url, params=search_params)
+            response = self._get_api_data("DS_BT_Search", search_params, return_json=False)
             data = response.json()
-            logger.info('Finished search for {search_term}'.format(
-                search_term=search_term))
-            logger.info(data)
+            logger.info(f"Finished search for {search_term}")
+            logger.debug(data)
 
             return data['data']
         else:
@@ -224,8 +209,6 @@ class DownloadStationAPI:
                                 search_task_id,
                                 quality_to_search):
 
-        api_path = nas_api_endpoint_details['DS_BT_Search']['path']
-        api_endpoint = nas_api_endpoint_details['DS_BT_Search']['api_endpoint']
         search_params = {
             'sort_by'       : 'seeds',
             'sort_direction': 'desc',
@@ -236,13 +219,8 @@ class DownloadStationAPI:
             '_sid'          : self.session_id
         }
 
-        api_url = '{nasaddress}/{path}?api={api_end}'.format(
-            nasaddress=self.nas_address,
-            path=api_path, api_end=api_endpoint)
-        response = requests.get(api_url, params=search_params)
-
-        data = response.json()
-        logger.info(data)
+        data = self._get_api_data("DS_BT_Search", search_params)
+        logger.debug(data)
         if data["data"]["finished"] is False:
             return data["data"]["finished"]
         else:
@@ -266,10 +244,12 @@ class DownloadStationAPI:
                         filter_title Optional. Filter the records by the title using
                             this parameter. Default to ‘’
                 :param search_term:
+                :param default_search_quality:
                 :return:
                 """
+
         # Start search and get taskID
-        logger.info("Searching for {}".format(search_term))
+        logger.info(f"Searching for {search_term}")
 
         search_params = {
             'version': 1,
@@ -278,17 +258,8 @@ class DownloadStationAPI:
             'module' : 'enabled',
             '_sid'   : self.session_id
         }
-        api_path = nas_api_endpoint_details['DS_BT_Search']['path']
-        api_endpoint = nas_api_endpoint_details['DS_BT_Search']['api_endpoint']
-
-        api_url = '{nasaddress}/' \
-                  '{path}?' \
-                  'api={api_end}'.format(nasaddress=self.nas_address,
-                                         path=api_path,
-                                         api_end=api_endpoint)
-        response = requests.get(api_url, params=search_params)
-        data = response.json()
-        logger.info(data)
+        data = self._get_api_data("DS_BT_Search", search_params)
+        logger.debug(data)
 
         search_task_id = data['data']['taskid']
 
@@ -310,6 +281,7 @@ class DownloadStationAPI:
         :return:
         """
         logger.info('Getting individual info')
+
         get_info_params = {
             'version'   : 1,
             'method'    : 'getinfo',
@@ -319,19 +291,13 @@ class DownloadStationAPI:
             '_sid'      : self.session_id
         }
 
-        api_path = nas_api_endpoint_details['DS_Task']['path']
-        api_endpoint = nas_api_endpoint_details['DS_Task']['api_endpoint']
+        data = self._get_api_data("DS_Task", get_info_params)
 
-        api_url = '{nasaddress}/{path}?api={api_end}'.format(
-            nasaddress=self.nas_address,
-            path=api_path, api_end=api_endpoint)
-        response = requests.get(api_url, params=get_info_params)
-        data = response.json()
         if data['success'] is True:
             logger.info('Download info retrieved')
             return data['data']
         else:
-            logger.error('Problem adding download task')
+            logger.error(PROBLEM_ADDING_DOWNLOAD_LOG)
             logger.error(data)
             return False
 
@@ -348,17 +314,13 @@ class DownloadStationAPI:
             # ! Sid must always be last
             '_sid'      : self.session_id
         }
+        data = self._get_api_data("DS_Task", get_info_params)
 
-        api_path = nas_api_endpoint_details['DS_Task']['path']
-        api_endpoint = nas_api_endpoint_details['DS_Task']['api_endpoint']
-        api_url = self.format_api_endpoint_url(api_path, api_endpoint)
-        response = requests.get(api_url, params=get_info_params)
-        data = response.json()
         if data['success'] is True:
             logger.info('Download info retrieved')
             return data['data']
         else:
-            logger.error('Problem adding download task')
+            logger.error(PROBLEM_ADDING_DOWNLOAD_LOG)
             logger.error(data)
             return False
 
@@ -382,17 +344,13 @@ class DownloadStationAPI:
             '_sid'   : self.session_id
         }
 
-        api_path = nas_api_endpoint_details['DS_Task']['path']
-        api_endpoint = nas_api_endpoint_details['DS_Task']['api_endpoint']
+        data = self._get_api_data("DS_Task", search_params)
 
-        api_url = self.format_api_endpoint_url(api_path, api_endpoint)
-        response = requests.get(api_url, params=search_params)
-        data = response.json()
         if data['success'] is True:
             logger.info('Download task successfully added')
             return True
         else:
-            logger.error('Problem adding download task')
+            logger.error(PROBLEM_ADDING_DOWNLOAD_LOG)
             logger.error(data)
             return False
 
@@ -412,11 +370,8 @@ class DownloadStationAPI:
             # ! Sid must always be last
             '_sid'   : self.session_id
         }
-        api_path = nas_api_endpoint_details['DS_Task']['path']
-        api_endpoint = nas_api_endpoint_details['DS_Task']['api_endpoint']
-        api_url = self.format_api_endpoint_url(api_path, api_endpoint)
-        response = requests.get(api_url, params=resume_params)
-        data = response.json()
+
+        data = self._get_api_data("DS_Task", resume_params)
         if data['success'] is True:
             logger.info('Download resumed')
             return True
@@ -443,11 +398,7 @@ class DownloadStationAPI:
             '_sid'   : self.session_id
         }
 
-        api_path = nas_api_endpoint_details['DS_Task']['path']
-        api_endpoint = nas_api_endpoint_details['DS_Task']['api_endpoint']
-        api_url = self.format_api_endpoint_url(api_path, api_endpoint)
-        response = requests.get(api_url, params=delete_params)
-        data = response.json()
+        data = self._get_api_data("DS_Task", delete_params)
         if data['success'] is True:
             logger.info('Download removed')
             return True
