@@ -5,7 +5,7 @@ Credits
 Development Lead
 ----------------
 
-* Paul Armstrong <paul_armstrong211@gmail.com>
+* Paul Armstrong <paul.armstrong211@gmail.com>
 
 Contributors
 ------------
