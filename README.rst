@@ -19,26 +19,12 @@ Small python wrapper for interacting with the Synology Download Station.
 
 * Free software: MIT license
 * Documentation: https://download-station-api.readthedocs.io.
-
+* Synology documentation: https://global.download.synology.com/download/Document/Software/DeveloperGuide/Package/DownloadStation/All/enu/Synology_Download_Station_Web_API.pdf
 
 Features
 --------
 
 * TODO: Write this readme
-
-
-From Synology docs
-    5 Basic elements of requests to their APIS
-         API name: Name of the API requested
-         version: Version of the API requested
-         path: cgi path of the API. The path information can be retrieved by
-            requesting SYNO.API.Info
-         method: Method requested
-         _sid: Authorized session ID. Each API request should pass a sid value
-            via either HTTP
-
-GET
-/webapi/<CGI_PATH>?api=<API_NAME>&version=<VERSION>&method=<METHOD>[&<PARAMS>][&_sid=<SID>]
 
 
 Credits
