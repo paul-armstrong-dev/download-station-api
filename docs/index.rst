@@ -1,5 +1,5 @@
 Welcome to Download Station API's documentation!
-======================================
+=================================================
 
 .. toctree::
    :maxdepth: 2
@@ -8,7 +8,7 @@ Welcome to Download Station API's documentation!
    readme
    installation
    usage
-   modules
+   class_documentation
    contributing
    authors
    history

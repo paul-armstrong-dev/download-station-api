@@ -29,6 +29,20 @@ Features
 * TODO: Write this readme
 
 
+From Synology docs
+    5 Basic elements of requests to their APIS
+         API name: Name of the API requested
+         version: Version of the API requested
+         path: cgi path of the API. The path information can be retrieved by
+            requesting SYNO.API.Info
+         method: Method requested
+         _sid: Authorized session ID. Each API request should pass a sid value
+            via either HTTP
+
+GET
+/webapi/<CGI_PATH>?api=<API_NAME>&version=<VERSION>&method=<METHOD>[&<PARAMS>][&_sid=<SID>]
+
+
 Credits
 -------
 

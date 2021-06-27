@@ -5,61 +5,33 @@ from typing import Dict
 import requests
 from loguru import logger
 
+from .utils.auth_error import AuthError
+from .utils.api_endpoint_details import nas_api_endpoint_details
 
 # Class written to interact with the Synology download station API
 # api docs stored here:
 # https://global.download.synology.com/download/Document/DeveloperGuide/Synology_Download_Station_Web_API.pdf
 
 
-class AuthError(Exception): pass
-
-
-nas_api_endpoint_details = {
-    'API_Info'    : {'maxVersion'  : 1, 'minVersion': 1, 'path': 'query.cgi',
-                     'api_endpoint': 'SYNO.API.Info'},
-    'API_Auth'    : {'maxVersion'  : 6, 'minVersion': 1, 'path': 'auth.cgi',
-                     'api_endpoint': 'SYNO.API.Auth'},
-    'DS_Info'     : {'maxVersion'  : 2, 'minVersion': 1,
-                     'path'        : 'DownloadStation/info.cgi',
-                     'api_endpoint': 'SYNO.DownloadStation.Info'},
-    'DS_BT_Search': {'maxVersion'  : 1, 'minVersion': 1,
-                     'path'        : 'DownloadStation/btsearch.cgi',
-                     'api_endpoint': 'SYNO.DownloadStation.BTSearch'},
-    'DS_Task'     : {'maxVersion'  : 3, 'minVersion': 1,
-                     'path'        : 'DownloadStation/task.cgi',
-                     'api_endpoint': 'SYNO.DownloadStation.Task'}
-}
-
-"""
-
-From Synology docs
-    5 Basic elements of requests to their APIS
-         API name: Name of the API requested
-         version: Version of the API requested
-         path: cgi path of the API. The path information can be retrieved by
-            requesting SYNO.API.Info
-         method: Method requested
-         _sid: Authorized session ID. Each API request should pass a sid value
-            via either HTTP
-
-GET
-/webapi/<CGI_PATH>?api=<API_NAME>&version=<VERSION>&method=<METHOD>[&<PARAMS>][&_sid=<SID>]
-"""
 # Here to quiet "code smells" / neaten up the code a bit
 PROBLEM_ADDING_DOWNLOAD_LOG = "Problem adding download task"
 ERROR_LOG = ""
 
 
 class DownloadStationAPI:
-
-    def __init__(self, user_name, password, nas_ip, api_port="5000", api_endpoint="webapi"):
+    def __init__(self,
+                 user_name: str,
+                 password: str,
+                 nas_ip: str,
+                 api_port: str = "5000",
+                 api_endpoint: str = "webapi"):
         """
 
-            :param user_name:
-            :param password:
-            :param nas_ip:
-            :param api_endpoint:
-            :param api_port:
+            :param user_name: Local Synology username
+            :param password: Local synology password
+            :param nas_ip: Synology IP address which hosts the download station instance
+            :param api_endpoint: Optional, defaults to webapi, should only be changed if a separate endpoint has been configured
+            :param api_port: Optional, defaults to 5000
         """
         self.class_name = type(self).__name__
         logger.info(f"{self.class_name} initialised")
@@ -75,46 +47,14 @@ class DownloadStationAPI:
                                             method='login',
                                             version=2)
 
-    def authenticate(self, session: str, auth_format: str, method: str, version: int) -> str:
-        """
-
-            :param session:
-            :param auth_format:
-            :param method:
-            :param version:
-        """
-        authentication_params = {
-            'session': session,
-            'format' : auth_format,
-            'method' : method,
-            'version': version,
-            'account': self.user_name,
-            'passwd' : self.password
-        }
-        # Authorization, returns SID
-        data = self._get_api_data("API_Auth", authentication_params)
-
-        if data['success']:
-            # If successfully authenticated use
-            # the SID in the subsequent requests
-            logger.success("successfully authenticated")
-            session_id = data['data']['sid']
-            return session_id
-        else:
-            logger.error(data)
-            raise AuthError('Authentication unsuccessful')
-
     def _get_api_data(self, api_endpoint: str, params: Dict, return_json: bool = True):
         """
-        :param api_endpoint:
-        :type api_endpoint:
-        :param params:
-        :type params:
-        :param return_json:
-        :type return_json:
+
+        :param api_endpoint: self-explanatory
+        :param params: Request params be passed through to API
+        :param return_json: Specify whether to return json/dict or the entire requests.response
         :return: API data in specified format
         :rtype: Either dict or raw response, depending on last parameter
-
         """
 
         endpoint_info = nas_api_endpoint_details.get(api_endpoint)
@@ -158,32 +98,48 @@ class DownloadStationAPI:
             logger.error('Problem with closing API sessions')
         return self
 
-    def bt_search_for_show(self,
-                           search_term: str,
-                           wait_time: int = 30,
-                           quality_to_search: str = '720p',
-                           retry_without_filters: bool = False) -> object:
+    def authenticate(self, session: str, auth_format: str, method: str, version: int) -> str:
         """
-            GET
-                taskid  Task ID
-                offset  Optional.
-                Beginning task on the requested record. Default to “0”.
-                    limit   Optional. Number of records requested: “-1”
-                Beans to list all tasks. Default to “-1”.
-                    sort_by Optional.
-                Possible value is title, size, date, peers, provider, seeds
-                    or leechs. Default to ‘title’
-                sort_direction Possible value is desc or asc
-                filter_category Optional. Filter the records by the category
-                    using Category ID returned
-                    by getCategory function. Default to ‘’
-                filter_title Optional. Filter the records by the title using
-                    this parameter. Default to ‘’
-        :param retry_without_filters:
-        :type retry_without_filters:
-        :param search_term:
-        :param wait_time:
-        :param quality_to_search:
+            See init for example usage
+
+            :param session: Authentication session type.
+            :param auth_format: Authentication format
+            :param method: Authentication method
+            :param version: API version to address
+        """
+        authentication_params = {
+            'session': session,
+            'format' : auth_format,
+            'method' : method,
+            'version': version,
+            'account': self.user_name,
+            'passwd' : self.password
+        }
+        # Authorization, returns SID
+        data = self._get_api_data("API_Auth", authentication_params)
+
+        if data['success']:
+            # If successfully authenticated use
+            # the SID in the subsequent requests
+            logger.success("successfully authenticated")
+            session_id = data['data']['sid']
+            return session_id
+        else:
+            logger.error(data)
+            raise AuthError('Authentication unsuccessful')
+
+    def search(self,
+               search_term: str,
+               wait_time: int = 30,
+               quality_to_search: str = '720p') -> object:
+        """
+
+        * Uses any configured search locations configured for the download station to search
+        * Essentially the same as typing in the search bar there
+
+        :param search_term: Thing to search for
+        :param wait_time: Time to wait for the search to complete.
+        :param quality_to_search: Video quality to search for.
         :return:
         :rtype:
         """
@@ -225,12 +181,11 @@ class DownloadStationAPI:
             return None
 
     def check_if_search_is_done(self,
-                                search_task_id,
-                                quality_to_search) -> object:
+                                search_task_id: str,
+                                quality_to_search: str):
         """
 
         :param search_task_id:
-        :type search_task_id:
         :param quality_to_search:
         :type quality_to_search:
         :return:
@@ -252,29 +207,16 @@ class DownloadStationAPI:
         else:
             return data["data"]
 
-    def bt_search_with_wait(self, search_term: object, default_search_quality: object = "720p") -> object:
+    def bt_search_with_wait(self,
+                            search_term: str,
+                            default_search_quality: str = "720p"):
         """
-                    GET
-                        taskid  Task ID
-                        offset  Optional.
-                        Beginning task on the requested record. Default to “0”.
-                            limit   Optional. Number of records requested: “-1”
-                        Beans to list all tasks. Default to “-1”.
-                            sort_by Optional.
-                        Possible value is title, size, date, peers, provider, seeds
-                            or leechs. Default to ‘title’
-                        sort_direction Possible value is desc or asc
-                        filter_category Optional. Filter the records by the category
-                            using Category ID returned
-                            by getCategory function. Default to ‘’
-                        filter_title Optional. Filter the records by the title using
-                            this parameter. Default to ‘’
-                :return:
-                :rtype:
+
                 :param search_term:
                 :param default_search_quality:
                 :return:
-                """
+                :rtype:
+        """
 
         # Start search and get taskID
         logger.info(f"Searching for {search_term}")
@@ -303,9 +245,8 @@ class DownloadStationAPI:
         return self.check_if_search_is_done(search_task_id,
                                             quality_to_search=default_search_quality)
 
-    def get_individual_download_info(self, download_task_id: object) -> Dict:
+    def get_individual_download_info(self, download_task_id: str) -> Dict:
         """
-            GET /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=list
         :param download_task_id:
         :return:
         :rtype:
@@ -331,13 +272,12 @@ class DownloadStationAPI:
             logger.error(data)
 
     def get_download_info(self) -> Dict:
-
         """
-            GET /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=list
-        :return:
-        :rtype:
-        :rtype: object
-        :return:
+
+        Retrieves a list of current downloads
+
+        :return: Dict containing a list of current downloads along with metadata
+        :rtype: Dict
         """
         logger.info('Getting current download info')
         get_info_params = {
@@ -357,19 +297,12 @@ class DownloadStationAPI:
             logger.error(data)
 
     # Defaulting to series at the moment
-    def add_download_task(self, url: object, destination: object = '/AutomaticDownloads/Series') -> bool:
+    def add_download_task(self, url: str, destination: str = '') -> bool:
         """
-        /AutomaticDownloads/Series/
-        /var/services/video/Download/
-        POST /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1
-        &method=create&uri=ftps://192.0.0.1:21/test/test.zip&username=admin&password=123
-            :param url:
-            :type url:
-            :param destination:
-            :type destination:
-            :return:
-            :rtype: object
-            :return: True or false based on successful add
+            :param url: Magnet download URL
+            :param destination: Relative synology URL. If left blank will take the default of the synology download station
+            :return: True or false based on whether or the the download was successfully added
+            :rtype: bool
         """
         logger.info('Adding download task')
 
@@ -394,10 +327,6 @@ class DownloadStationAPI:
 
     def resume_download_task(self, download_task_id: object) -> bool:
         """
-        GET /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=resume&id=dbid_001,dbid_002
-        Response
-            id Task IDs 1 and later error Action result. Error=0 for success.
-
         :return:
         :rtype:
         :rtype: object
@@ -423,14 +352,10 @@ class DownloadStationAPI:
 
     def remove_download_task(self, download_task_id: object) -> bool:
         """
-        GET /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=delete&id=
-        Response
-            id Task IDs 1 and later error Action result. Error=0 for success.
 
-        :return:
-        :rtype:
+        :return: True if removed successfully
+        :rtype: bool
         :param download_task_id: Synology task ID, retrieved when getting the download info
-        :return:
         """
         logger.info("Removing {}".format(download_task_id))
         delete_params = {
@@ -450,15 +375,15 @@ class DownloadStationAPI:
             logger.error(data)
             return False
 
-    def correct_finished_downloads(self, download_task_id: object) -> bool:
+    def correct_finished_downloads(self, download_task_id: str) -> bool:
         """
-            Simple function written for finished downloads,
-            In the case that the download has already completed rather resume it so we can get more info
-            Or remove it if the file is no longer there
-        :return:
-        :rtype:
+
+        Simple function written for finished downloads, in the case that the download has already completed rather
+        resume it so we can get more info or remove it if the file is no longer there
+
         :param download_task_id:
-        :return:
+        :return: True if corrected successfully
+        :rtype: bool
         """
         old_status = 'finished'
         new_status = old_status
@@ -474,7 +399,6 @@ class DownloadStationAPI:
                 logger.info('Incorrectly resumed')
                 self.remove_download_task(download_task_id=download_task_id)
         return True
-
 
 if __name__ == '__main__':
     # Example values
