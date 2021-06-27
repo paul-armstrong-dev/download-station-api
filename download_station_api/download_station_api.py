@@ -330,7 +330,7 @@ class DownloadStationAPI:
             logger.error(PROBLEM_ADDING_DOWNLOAD_LOG)
             logger.error(data)
 
-    def get_download_info(self) -> object:
+    def get_download_info(self) -> Dict:
 
         """
             GET /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=list
@@ -355,10 +355,9 @@ class DownloadStationAPI:
         else:
             logger.error(PROBLEM_ADDING_DOWNLOAD_LOG)
             logger.error(data)
-            return False
 
     # Defaulting to series at the moment
-    def add_download_task(self, url: object, destination: object = '/AutomaticDownloads/Series') -> object:
+    def add_download_task(self, url: object, destination: object = '/AutomaticDownloads/Series') -> bool:
         """
         /AutomaticDownloads/Series/
         /var/services/video/Download/
@@ -393,7 +392,7 @@ class DownloadStationAPI:
             logger.error(data)
             return False
 
-    def resume_download_task(self, download_task_id: object) -> object:
+    def resume_download_task(self, download_task_id: object) -> bool:
         """
         GET /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=resume&id=dbid_001,dbid_002
         Response
@@ -422,7 +421,7 @@ class DownloadStationAPI:
             logger.error(data)
             return False
 
-    def remove_download_task(self, download_task_id: object) -> object:
+    def remove_download_task(self, download_task_id: object) -> bool:
         """
         GET /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=delete&id=
         Response
@@ -451,7 +450,7 @@ class DownloadStationAPI:
             logger.error(data)
             return False
 
-    def correct_finished_downloads(self, download_task_id: object) -> object:
+    def correct_finished_downloads(self, download_task_id: object) -> bool:
         """
             Simple function written for finished downloads,
             In the case that the download has already completed rather resume it so we can get more info
