@@ -1,1 +1,0 @@
-python-docs-theme==2021.5
