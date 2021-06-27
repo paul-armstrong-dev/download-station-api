@@ -7,7 +7,7 @@ Download Station API
         :target: https://pypi.python.org/pypi/download_station_api
 
 .. image:: https://img.shields.io/travis/paul-armstrong-dev/download_station_api.svg
-        :target: https://travis-ci.com/paul-armstrong-dev/download_station_api
+        :target: https://travis-ci.com/paul-armstrong-dev/download-station-api.svg?branch=main
 
 .. image:: https://readthedocs.org/projects/download-station-api/badge/?version=latest
         :target: https://download-station-api.readthedocs.io/en/latest/?version=latest
