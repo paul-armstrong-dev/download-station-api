@@ -6,14 +6,12 @@ Download Station API
 .. image:: https://img.shields.io/pypi/v/download_station_api.svg
         :target: https://pypi.python.org/pypi/download_station_api
 
-.. image:: https://img.shields.io/travis/paul-armstrong-dev/download_station_api.svg
-        :target: https://travis-ci.com/paul-armstrong-dev/download-station-api.svg?branch=main
+.. image:: https://api.travis-ci.com/paul-armstrong-dev/download-station-api.svg?branch=main
+        :target: https://api.travis-ci.com/paul-armstrong-dev/download-station-api.svg?branch=main
 
 .. image:: https://readthedocs.org/projects/download-station-api/badge/?version=latest
         :target: https://download-station-api.readthedocs.io/en/latest/?version=latest
         :alt: Documentation Status
-
-
 
 
 Small python wrapper for interacting with the Synology Download Station.
