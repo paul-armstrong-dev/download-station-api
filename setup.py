@@ -16,7 +16,7 @@ with open('HISTORY.rst') as history_file:
 def get_requirements(test=False) -> List[str]:
     """Returns all requirements for this package."""
     if test:
-        with open('requirements_test.txt') as f:
+        with open('requirements_dev.txt') as f:
             requirements = f.read().splitlines()
     else:
         with open('requirements.txt') as f:

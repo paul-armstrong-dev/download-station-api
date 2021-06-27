@@ -28,7 +28,6 @@ Features
 
 * TODO: Write this readme
 
-* Can be installed with: pip install download-station-api==0.1.0
 
 Credits
 -------

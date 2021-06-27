@@ -1,7 +1,10 @@
 """Main module."""
 import time
+from typing import Dict
+
 import requests
 from loguru import logger
+
 
 # Class written to interact with the Synology download station API
 # api docs stored here:
@@ -43,8 +46,9 @@ GET
 /webapi/<CGI_PATH>?api=<API_NAME>&version=<VERSION>&method=<METHOD>[&<PARAMS>][&_sid=<SID>]
 """
 # Here to quiet "code smells" / neaten up the code a bit
-PROBLEM_ADDING_DOWNLOAD_LOG="Problem adding download task"
-ERROR_LOG=""
+PROBLEM_ADDING_DOWNLOAD_LOG = "Problem adding download task"
+ERROR_LOG = ""
+
 
 class DownloadStationAPI:
 
@@ -53,7 +57,7 @@ class DownloadStationAPI:
 
             :param user_name:
             :param password:
-            :param nas_address:
+            :param nas_ip:
             :param api_endpoint:
             :param api_port:
         """
@@ -67,17 +71,21 @@ class DownloadStationAPI:
         self.api_port = api_port
         self.nas_address = f"http://{self.nas_ip}:{api_port}/{api_endpoint}"
         self.session_id = self.authenticate(session='DownloadStation',
-                                            format='cookie',
+                                            auth_format='cookie',
                                             method='login',
                                             version=2)
 
-    def authenticate(self, session, format, method, version):
+    def authenticate(self, session: str, auth_format: str, method: str, version: int) -> str:
         """
-            ADD DOCS
+
+            :param session:
+            :param auth_format:
+            :param method:
+            :param version:
         """
         authentication_params = {
             'session': session,
-            'format' : format,
+            'format' : auth_format,
             'method' : method,
             'version': version,
             'account': self.user_name,
@@ -96,8 +104,16 @@ class DownloadStationAPI:
             logger.error(data)
             raise AuthError('Authentication unsuccessful')
 
-    def _get_api_data(self, api_endpoint, params=None, return_json=True):
+    def _get_api_data(self, api_endpoint: str, params: Dict, return_json: bool = True):
         """
+        :param api_endpoint:
+        :type api_endpoint:
+        :param params:
+        :type params:
+        :param return_json:
+        :type return_json:
+        :return: API data in specified format
+        :rtype: Either dict or raw response, depending on last parameter
 
         """
 
@@ -143,10 +159,10 @@ class DownloadStationAPI:
         return self
 
     def bt_search_for_show(self,
-                           search_term,
-                           wait_time=30,
-                           quality_to_search='720p',
-                           retry_without_filters=False):
+                           search_term: str,
+                           wait_time: int = 30,
+                           quality_to_search: str = '720p',
+                           retry_without_filters: bool = False) -> object:
         """
             GET
                 taskid  Task ID
@@ -163,10 +179,13 @@ class DownloadStationAPI:
                     by getCategory function. Default to ‘’
                 filter_title Optional. Filter the records by the title using
                     this parameter. Default to ‘’
+        :param retry_without_filters:
+        :type retry_without_filters:
         :param search_term:
         :param wait_time:
         :param quality_to_search:
         :return:
+        :rtype:
         """
         # Start search and get taskID
 
@@ -207,8 +226,15 @@ class DownloadStationAPI:
 
     def check_if_search_is_done(self,
                                 search_task_id,
-                                quality_to_search):
+                                quality_to_search) -> object:
+        """
 
+        :param search_task_id:
+        :type search_task_id:
+        :param quality_to_search:
+        :type quality_to_search:
+        :return:
+        """
         search_params = {
             'sort_by'       : 'seeds',
             'sort_direction': 'desc',
@@ -226,7 +252,7 @@ class DownloadStationAPI:
         else:
             return data["data"]
 
-    def bt_search_with_wait(self, search_term, default_search_quality="720p"):
+    def bt_search_with_wait(self, search_term: object, default_search_quality: object = "720p") -> object:
         """
                     GET
                         taskid  Task ID
@@ -243,6 +269,8 @@ class DownloadStationAPI:
                             by getCategory function. Default to ‘’
                         filter_title Optional. Filter the records by the title using
                             this parameter. Default to ‘’
+                :return:
+                :rtype:
                 :param search_term:
                 :param default_search_quality:
                 :return:
@@ -275,10 +303,12 @@ class DownloadStationAPI:
         return self.check_if_search_is_done(search_task_id,
                                             quality_to_search=default_search_quality)
 
-    def get_individual_download_info(self, download_task_id):
+    def get_individual_download_info(self, download_task_id: object) -> Dict:
         """
             GET /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=list
+        :param download_task_id:
         :return:
+        :rtype:
         """
         logger.info('Getting individual info')
 
@@ -299,11 +329,14 @@ class DownloadStationAPI:
         else:
             logger.error(PROBLEM_ADDING_DOWNLOAD_LOG)
             logger.error(data)
-            return False
 
-    def get_download_info(self):
+    def get_download_info(self) -> object:
+
         """
             GET /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=list
+        :return:
+        :rtype:
+        :rtype: object
         :return:
         """
         logger.info('Getting current download info')
@@ -325,23 +358,29 @@ class DownloadStationAPI:
             return False
 
     # Defaulting to series at the moment
-    def add_download_task(self, url, destination='/AutomaticDownloads/Series'):
+    def add_download_task(self, url: object, destination: object = '/AutomaticDownloads/Series') -> object:
         """
         /AutomaticDownloads/Series/
         /var/services/video/Download/
         POST /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1
         &method=create&uri=ftps://192.0.0.1:21/test/test.zip&username=admin&password=123
+            :param url:
+            :type url:
+            :param destination:
+            :type destination:
+            :return:
+            :rtype: object
             :return: True or false based on successful add
         """
         logger.info('Adding download task')
 
         search_params = {
-            'version': 2,
-            'method' : 'create',
-            'uri'    : url,
+            'version'    : 2,
+            'method'     : 'create',
+            'uri'        : url,
             'destination': destination,
             # ! Sid must always be last
-            '_sid'   : self.session_id
+            '_sid'       : self.session_id
         }
 
         data = self._get_api_data("DS_Task", search_params)
@@ -354,12 +393,15 @@ class DownloadStationAPI:
             logger.error(data)
             return False
 
-    def resume_download_task(self, download_task_id):
+    def resume_download_task(self, download_task_id: object) -> object:
         """
         GET /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=resume&id=dbid_001,dbid_002
         Response
             id Task IDs 1 and later error Action result. Error=0 for success.
 
+        :return:
+        :rtype:
+        :rtype: object
         :param download_task_id: Synology task ID, retrieved when getting the download info
         :return:
         """
@@ -380,12 +422,14 @@ class DownloadStationAPI:
             logger.error(data)
             return False
 
-    def remove_download_task(self, download_task_id):
+    def remove_download_task(self, download_task_id: object) -> object:
         """
         GET /webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=delete&id=
         Response
             id Task IDs 1 and later error Action result. Error=0 for success.
 
+        :return:
+        :rtype:
         :param download_task_id: Synology task ID, retrieved when getting the download info
         :return:
         """
@@ -407,11 +451,13 @@ class DownloadStationAPI:
             logger.error(data)
             return False
 
-    def correct_finished_downloads(self, download_task_id):
+    def correct_finished_downloads(self, download_task_id: object) -> object:
         """
             Simple function written for finished downloads,
             In the case that the download has already completed rather resume it so we can get more info
             Or remove it if the file is no longer there
+        :return:
+        :rtype:
         :param download_task_id:
         :return:
         """
