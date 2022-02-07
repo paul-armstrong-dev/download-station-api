@@ -45,7 +45,7 @@ class DownloadStationAPI:
         self.session_id = self.authenticate(session='DownloadStation',
                                             auth_format='cookie',
                                             method='login',
-                                            version=2)
+                                            version=3)
 
     def _get_api_data(self, api_endpoint: str, params: Dict, return_json: bool = True):
         """
