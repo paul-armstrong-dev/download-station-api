@@ -70,6 +70,9 @@ class DownloadStationAPI:
         else:
             return response
 
+    def __enter__(self):
+        logger.info(f"{self.class_name} entered successfully")
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             logger.error(
